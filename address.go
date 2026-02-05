@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 var b58Alphabet = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
@@ -158,4 +160,31 @@ func trimLeadingZeros(b []byte) []byte {
 		return []byte{0}
 	}
 	return b[i:]
+}
+
+func PrivateKeyHexToAddressBase58(privateKeyHex string) (string, error) {
+	privateKeyHex = strings.TrimSpace(privateKeyHex)
+	privateKeyHex = strings.TrimPrefix(privateKeyHex, "0x")
+	privateKeyHex = strings.TrimPrefix(privateKeyHex, "0X")
+
+	priv, err := crypto.HexToECDSA(privateKeyHex)
+	if err != nil {
+		return "", err
+	}
+
+	pubBytes := crypto.FromECDSAPub(&priv.PublicKey)
+
+	hash := crypto.Keccak256(pubBytes[1:])
+
+	addr20 := hash[12:]
+
+	payload := append([]byte{0x41}, addr20...)
+
+	h1 := sha256.Sum256(payload)
+	h2 := sha256.Sum256(h1[:])
+	checksum := h2[:4]
+
+	full := append(payload, checksum...)
+
+	return base58Encode(full), nil
 }

@@ -3,6 +3,22 @@ package tron
 import (
 	"context"
 	"encoding/json"
+	"math/big"
+	"time"
+)
+
+const (
+	isVisible = true
+)
+
+const (
+	TxStatusSuccess = "SUCCESS"
+	TxStatusFailed  = "FAILED"
+	TxStatusPending = "PENDING"
+)
+
+const (
+	newBlockGenerationTime = 3 * time.Second
 )
 
 type Raw = json.RawMessage
@@ -50,6 +66,12 @@ type GetTransactionInfoByIDReq struct {
 func (c *Client) GetTransactionInfoByID(ctx context.Context, txID string) (Raw, error) {
 	var out Raw
 	err := c.Call(ctx, "gettransactioninfobyid", GetTransactionInfoByIDReq{Value: txID}, &out)
+	return out, err
+}
+
+func (c *Client) GetTransactionInfoByIDSolid(ctx context.Context, txID string) (Raw, error) {
+	var out Raw
+	err := c.Call(ctx, "walletsolidity/gettransactioninfobyid", GetTransactionInfoByIDReq{Value: txID}, &out)
 	return out, err
 }
 
@@ -119,4 +141,60 @@ func (c *Client) BroadcastTransaction(ctx context.Context, signedTx []byte) (*Br
 	}
 
 	return &out, nil
+}
+
+type CreateTransactionReq struct {
+	OwnerAddress string `json:"owner_address"`
+	ToAddress    string `json:"to_address"`
+	Amount       int64  `json:"amount"`
+	Visible      bool   `json:"visible,omitempty"`
+}
+
+func (c *Client) CreateTransaction(ctx context.Context, req CreateTransactionReq) (Raw, error) {
+	var out Raw
+	err := c.Call(ctx, "createtransaction", req, &out)
+	return out, err
+}
+
+func (c *Client) BuildTransferTRXTx(ctx context.Context, from string, to string, amount *big.Int) (Raw, error) {
+	return c.CreateTransaction(ctx, CreateTransactionReq{
+		OwnerAddress: from,
+		ToAddress:    to,
+		Amount:       amount.Int64(),
+		Visible:      isVisible,
+	})
+}
+
+type GetTransactionInfoStatusResult struct {
+	BlockNumber int64 `json:"blockNumber"`
+	Receipt     struct {
+		Result string `json:"result"`
+	} `json:"receipt"`
+}
+
+func (c *Client) GetTransactionStatusSolid(ctx context.Context, txID string) (string, error) {
+	tx, err := c.GetTransactionInfoByIDSolid(ctx, txID)
+	if err != nil {
+		return "", err
+	}
+
+	var out GetTransactionInfoStatusResult
+	if err := json.Unmarshal(tx, &out); err != nil {
+		return "", err
+	}
+
+	return convertTransactionStatus(out), nil
+}
+
+func convertTransactionStatus(result GetTransactionInfoStatusResult) string {
+	if result.BlockNumber == 0 {
+		return TxStatusPending
+	}
+
+	resultStr := result.Receipt.Result
+	if resultStr == "" || resultStr == TxStatusSuccess {
+		return TxStatusSuccess
+	}
+
+	return TxStatusFailed
 }

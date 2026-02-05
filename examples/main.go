@@ -2,20 +2,21 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/big"
+	"time"
 
 	"github.com/snakoner/go-tron-lib"
 )
 
 func main() {
+
 	client := tron.New("https://nile.trongrid.io")
 
 	trc20 := client.NewTRC20("TRPXG8YEMEaYE9dRs6fXvofFTiyMFE2mEg", true)
-	pk := "428c1224b892b2b2a619075a19cc6d74b3a235b5ffcac30cbccf9643658f61fd"
+	pk := "30aa9a4134118c36f4d458004697ae1c3f97680ac5fadfd560d84c6482ad04c6"
 
-	tx, err := trc20.BuildTransferTx(context.Background(), "TGi14cNEkHAMzkT8dnd42SD82dkSTvHguL", "TDxyML69uweBFRfoEBEbGYQUE3XTWzUPe8", big.NewInt(1000000), 100000000)
+	tx, err := trc20.BuildTransferTx(context.Background(), "TZJ32TTQgjqcYWQf626xTWaZUT9iKLXxtS", "TDxyML69uweBFRfoEBEbGYQUE3XTWzUPe8", big.NewInt(1000000), 100000000)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -30,5 +31,33 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(resp.TxID)
+	for {
+		status, err := client.GetTransactionStatus(context.Background(), resp.TxID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Printf("tx status: %s", status)
+		time.Sleep(3 * time.Second)
+	}
+	return
+
+	log.Printf("trc20 transfer txid: %s", resp.TxID)
+
+	rawTx, err := client.BuildTransferTRXTx(context.Background(), "TZJ32TTQgjqcYWQf626xTWaZUT9iKLXxtS", "TDxyML69uweBFRfoEBEbGYQUE3XTWzUPe8", big.NewInt(1000000))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	signedTx, err = tron.SignTransaction(rawTx, pk)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err = client.BroadcastTransaction(context.Background(), signedTx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("trx transfer txid: %s", resp.TxID)
 }
