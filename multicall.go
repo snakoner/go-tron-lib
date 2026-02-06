@@ -12,38 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-const multicallABIJSON = `[
-	{
-		"inputs": [
-			{
-				"components": [
-					{"internalType": "address", "name": "target", "type": "address"},
-					{"internalType": "bytes", "name": "callData", "type": "bytes"}
-				],
-				"internalType": "struct Multicall.Call[]",
-				"name": "calls",
-				"type": "tuple[]"
-			}
-		],
-		"name": "aggregate",
-		"outputs": [
-			{"internalType": "uint256", "name": "blockNumber", "type": "uint256"},
-			{"internalType": "bytes[]", "name": "returnData", "type": "bytes[]"}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	}
-]`
-
-const erc20BalanceOfABIJSON = `[
-	{
-		"inputs": [{"internalType": "address", "name": "account", "type": "address"}],
-		"name": "balanceOf",
-		"outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-		"stateMutability": "view",
-		"type": "function"
-	}
-]`
+const multicallABIJSON = `[{"inputs":[{"components":[{"internalType":"address","name":"target","type":"address"},{"internalType":"bytes","name":"callData","type":"bytes"}],"internalType":"struct Multicall.Call[]","name":"calls","type":"tuple[]"}],"name":"aggregate","outputs":[{"internalType":"uint256","name":"blockNumber","type":"uint256"},{"internalType":"bytes[]","name":"returnData","type":"bytes[]"}],"stateMutability":"nonpayable","type":"function"}]`
+const erc20BalanceOfABIJSON = `[{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]`
 
 type Multicall struct {
 	multicallAddress string
