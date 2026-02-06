@@ -23,6 +23,13 @@ type Client struct {
 	retryN      int
 	retryWait   time.Duration
 	maxBodySize int64
+	visible     bool
+	solid       bool
+}
+
+func NewSolid(baseURL string, opts ...Option) *Client {
+	opts = append(opts, WithSolid(true))
+	return New(baseURL, opts...)
 }
 
 func New(baseURL string, opts ...Option) *Client {
@@ -38,7 +45,10 @@ func New(baseURL string, opts ...Option) *Client {
 		retryN:      2,
 		retryWait:   250 * time.Millisecond,
 		maxBodySize: 4 << 20,
+		visible:     true,
+		solid:       false,
 	}
+
 	for _, opt := range opts {
 		opt(c)
 	}
@@ -57,6 +67,10 @@ func WithTronGridAPIKey(key string) Option {
 	return WithHeader("TRON-PRO-API-KEY", key)
 }
 
+func WithSolid(solid bool) Option {
+	return func(c *Client) { c.solid = solid }
+}
+
 func WithRetry(n int, wait time.Duration) Option {
 	return func(c *Client) {
 		c.retryN = n
@@ -73,12 +87,41 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("tron api error: status=%d body=%s", e.StatusCode, e.Body)
 }
 
+var canBeUsedSolidMethods = map[string]bool{
+	"getnowblock":             true,
+	"getblockbynum":           true,
+	"getblockbyid":            true,
+	"gettransactionbyid":      true,
+	"gettransactioninfobyid":  true,
+	"getaccount":              true,
+	"triggerconstantcontract": true,
+
+	"broadcasttransaction": false,
+	"createtransaction":    false,
+	"triggersmartcontract": false,
+}
+
 func (c *Client) Call(ctx context.Context, methodPath string, req any, out any) error {
 	if out == nil {
 		return errors.New("out must not be nil")
 	}
 
-	path := normalizePath(methodPath)
+	canBeUsed, ok := canBeUsedSolidMethods[methodPath]
+	if !ok {
+		return errors.New("method not found")
+	}
+
+	var path string
+	if c.solid {
+		if !canBeUsed {
+			path = "wallet/" + methodPath
+		} else {
+			path = "walletsolidity/" + methodPath
+		}
+	} else {
+		path = "wallet/" + methodPath
+	}
+
 	url := c.baseURL + "/" + path
 
 	var body []byte
@@ -145,16 +188,6 @@ func (c *Client) doOnce(ctx context.Context, url string, body []byte, out any) e
 		return fmt.Errorf("unmarshal response: %w; body=%s", err, string(b))
 	}
 	return nil
-}
-
-func normalizePath(p string) string {
-	p = strings.TrimSpace(p)
-	p = strings.TrimPrefix(p, "/")
-	if strings.HasPrefix(p, "wallet/") || strings.HasPrefix(p, "walletsolidity/") {
-		return p
-	}
-
-	return "wallet/" + p
 }
 
 func shouldRetry(err error) bool {

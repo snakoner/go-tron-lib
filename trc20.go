@@ -20,11 +20,10 @@ const (
 type TRC20 struct {
 	c        *Client
 	contract string
-	visible  bool
 }
 
-func (c *Client) NewTRC20(contract string, visible bool) *TRC20 {
-	return &TRC20{c: c, contract: contract, visible: visible}
+func (c *Client) NewTRC20(contract string) *TRC20 {
+	return &TRC20{c: c, contract: contract}
 }
 
 type TriggerConstResult struct {
@@ -46,7 +45,7 @@ func (t *TRC20) BalanceOf(ctx context.Context, owner string) (*big.Int, error) {
 		ContractAddress: t.contract,
 		Function:        "balanceOf(address)",
 		Parameter:       param,
-		Visible:         t.visible,
+		Visible:         t.c.visible,
 	})
 	if err != nil {
 		return nil, err
@@ -96,7 +95,7 @@ func (t *TRC20) callUint256NoArgs(ctx context.Context, fn string, ownerFrom stri
 		OwnerAddress:    ownerFrom,
 		ContractAddress: t.contract,
 		Function:        fn,
-		Visible:         t.visible,
+		Visible:         t.c.visible,
 	})
 	if err != nil {
 		return nil, err
@@ -122,7 +121,7 @@ func (t *TRC20) callStringBestEffort(ctx context.Context, fn string, ownerFrom s
 		OwnerAddress:    ownerFrom,
 		ContractAddress: t.contract,
 		Function:        fn,
-		Visible:         t.visible,
+		Visible:         t.c.visible,
 	})
 	if err != nil {
 		return "", err
@@ -222,7 +221,7 @@ func (t *TRC20) BuildTransferTx(
 		Function:        "transfer(address,uint256)",
 		Parameter:       param,
 		FeeLimit:        feeLimit,
-		Visible:         t.visible,
+		Visible:         t.c.visible,
 	})
 	if err != nil {
 		return nil, err

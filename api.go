@@ -8,10 +8,6 @@ import (
 )
 
 const (
-	isVisible = true
-)
-
-const (
 	TxStatusSuccess = "SUCCESS"
 	TxStatusFailed  = "FAILED"
 	TxStatusPending = "PENDING"
@@ -22,6 +18,7 @@ const (
 	maxSolidBlockWaitTime  = 80 * time.Second
 )
 
+type StatusFunc func(ctx context.Context, txID string) (string, error)
 type Raw = json.RawMessage
 
 func (c *Client) GetNowBlock(ctx context.Context) (Raw, error) {
@@ -70,22 +67,16 @@ func (c *Client) GetTransactionInfoByID(ctx context.Context, txID string) (Raw, 
 	return out, err
 }
 
-func (c *Client) GetTransactionInfoByIDSolid(ctx context.Context, txID string) (Raw, error) {
-	var out Raw
-	err := c.Call(ctx, "walletsolidity/gettransactioninfobyid", GetTransactionInfoByIDReq{Value: txID}, &out)
-	return out, err
-}
-
 type GetAccountReq struct {
 	Address string `json:"address"`
 	Visible bool   `json:"visible,omitempty"`
 }
 
-func (c *Client) GetAccount(ctx context.Context, address string, visible bool) (Raw, error) {
+func (c *Client) GetAccount(ctx context.Context, address string) (Raw, error) {
 	var out Raw
 	err := c.Call(ctx, "getaccount", GetAccountReq{
 		Address: address,
-		Visible: visible,
+		Visible: c.visible,
 	}, &out)
 	return out, err
 }
@@ -162,7 +153,7 @@ func (c *Client) BuildTransferTRXTx(ctx context.Context, from string, to string,
 		OwnerAddress: from,
 		ToAddress:    to,
 		Amount:       amount.Int64(),
-		Visible:      isVisible,
+		Visible:      c.visible,
 	})
 }
 
@@ -171,20 +162,6 @@ type GetTransactionInfoStatusResult struct {
 	Receipt     struct {
 		Result string `json:"result"`
 	} `json:"receipt"`
-}
-
-func (c *Client) GetTransactionStatusSolid(ctx context.Context, txID string) (string, error) {
-	tx, err := c.GetTransactionInfoByIDSolid(ctx, txID)
-	if err != nil {
-		return "", err
-	}
-
-	var out GetTransactionInfoStatusResult
-	if err := json.Unmarshal(tx, &out); err != nil {
-		return "", err
-	}
-
-	return convertTransactionStatus(out), nil
 }
 
 func (c *Client) GetTransactionStatus(ctx context.Context, txID string) (string, error) {
@@ -214,15 +191,20 @@ func convertTransactionStatus(result GetTransactionInfoStatusResult) string {
 	return TxStatusFailed
 }
 
-func (c *Client) WaitForStatusSuccessSolid(ctx context.Context, txID string) (string, error) {
-	return waitForStatus(ctx, txID, c.GetTransactionStatusSolid, maxSolidBlockWaitTime)
+func (c *Client) WaitForStatusSuccess(ctx context.Context, txID string, opts ...time.Duration) (string, error) {
+	maxWaitTime := maxSolidBlockWaitTime
+	if len(opts) > 0 {
+		maxWaitTime = opts[0]
+	}
+
+	return c.waitForStatus(ctx, txID, maxWaitTime)
 }
 
-func (c *Client) WaitForStatusSuccess(ctx context.Context, txID string, maxWaitTime time.Duration) (string, error) {
-	return waitForStatus(ctx, txID, c.GetTransactionStatus, maxWaitTime)
-}
-
-func waitForStatus(ctx context.Context, txID string, statusFunc func(ctx context.Context, txID string) (string, error), maxWaitTime time.Duration) (string, error) {
+func (c *Client) waitForStatus(
+	ctx context.Context,
+	txID string,
+	maxWaitTime time.Duration,
+) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, maxWaitTime)
 	defer cancel()
 
@@ -234,7 +216,7 @@ func waitForStatus(ctx context.Context, txID string, statusFunc func(ctx context
 		case <-ctx.Done():
 			return TxStatusFailed, ctx.Err()
 		case <-ticker.C:
-			status, err := statusFunc(ctx, txID)
+			status, err := c.GetTransactionStatus(ctx, txID)
 			if err != nil {
 				return "", err
 			}
