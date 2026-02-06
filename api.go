@@ -19,6 +19,7 @@ const (
 
 const (
 	newBlockGenerationTime = 3 * time.Second
+	maxSolidBlockWaitTime  = 80 * time.Second
 )
 
 type Raw = json.RawMessage
@@ -186,6 +187,20 @@ func (c *Client) GetTransactionStatusSolid(ctx context.Context, txID string) (st
 	return convertTransactionStatus(out), nil
 }
 
+func (c *Client) GetTransactionStatus(ctx context.Context, txID string) (string, error) {
+	tx, err := c.GetTransactionInfoByID(ctx, txID)
+	if err != nil {
+		return "", err
+	}
+
+	var out GetTransactionInfoStatusResult
+	if err := json.Unmarshal(tx, &out); err != nil {
+		return "", err
+	}
+
+	return convertTransactionStatus(out), nil
+}
+
 func convertTransactionStatus(result GetTransactionInfoStatusResult) string {
 	if result.BlockNumber == 0 {
 		return TxStatusPending
@@ -197,4 +212,39 @@ func convertTransactionStatus(result GetTransactionInfoStatusResult) string {
 	}
 
 	return TxStatusFailed
+}
+
+func (c *Client) WaitForStatusSuccessSolid(ctx context.Context, txID string) (string, error) {
+	return waitForStatus(ctx, txID, c.GetTransactionStatusSolid, maxSolidBlockWaitTime)
+}
+
+func (c *Client) WaitForStatusSuccess(ctx context.Context, txID string, maxWaitTime time.Duration) (string, error) {
+	return waitForStatus(ctx, txID, c.GetTransactionStatus, maxWaitTime)
+}
+
+func waitForStatus(ctx context.Context, txID string, statusFunc func(ctx context.Context, txID string) (string, error), maxWaitTime time.Duration) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, maxWaitTime)
+	defer cancel()
+
+	ticker := time.NewTicker(newBlockGenerationTime)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return TxStatusFailed, ctx.Err()
+		case <-ticker.C:
+			status, err := statusFunc(ctx, txID)
+			if err != nil {
+				return "", err
+			}
+			switch status {
+			case TxStatusSuccess,
+				TxStatusFailed:
+				return status, nil
+			case TxStatusPending:
+				continue
+			}
+		}
+	}
 }
