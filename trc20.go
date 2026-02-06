@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	ownerFrom = "TTyNBH7UDfxY1wqyjq9CsTgYM9p5KnNB3b"
+	ownerFromAddressStub = "TTyNBH7UDfxY1wqyjq9CsTgYM9p5KnNB3b"
 )
 
 type TRC20 struct {
@@ -68,7 +68,7 @@ func (t *TRC20) BalanceOf(ctx context.Context, owner string) (*big.Int, error) {
 }
 
 func (t *TRC20) Decimals(ctx context.Context) (uint8, error) {
-	v, err := t.callUint256NoArgs(ctx, "decimals()", ownerFrom)
+	v, err := t.callUint256NoArgs(ctx, "decimals()", ownerFromAddressStub)
 	if err != nil {
 		return 0, err
 	}
@@ -79,15 +79,15 @@ func (t *TRC20) Decimals(ctx context.Context) (uint8, error) {
 }
 
 func (t *TRC20) TotalSupply(ctx context.Context) (*big.Int, error) {
-	return t.callUint256NoArgs(ctx, "totalSupply()", ownerFrom)
+	return t.callUint256NoArgs(ctx, "totalSupply()", ownerFromAddressStub)
 }
 
 func (t *TRC20) Name(ctx context.Context) (string, error) {
-	return t.callStringBestEffort(ctx, "name()", ownerFrom)
+	return t.callStringBestEffort(ctx, "name()", ownerFromAddressStub)
 }
 
 func (t *TRC20) Symbol(ctx context.Context) (string, error) {
-	return t.callStringBestEffort(ctx, "symbol()", ownerFrom)
+	return t.callStringBestEffort(ctx, "symbol()", ownerFromAddressStub)
 }
 
 func (t *TRC20) callUint256NoArgs(ctx context.Context, fn string, ownerFrom string) (*big.Int, error) {
