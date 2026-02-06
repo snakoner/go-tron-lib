@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/big"
+	"sync"
 
 	"github.com/snakoner/go-tron-lib"
 )
@@ -20,15 +22,56 @@ var addresses = []string{
 }
 
 func main() {
-	client := tron.New(rpc)
-	multicall := client.NewMulticall(multicallAddress)
+	wg := sync.WaitGroup{}
+	results := make(chan []*big.Int)
 
-	balances, err := multicall.BalanceOf(context.Background(), tokenAddress, addresses)
-	if err != nil {
-		log.Fatal(err)
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		client := tron.New(rpc)
+		multicall := client.NewMulticall(multicallAddress)
 
-	for i, balance := range balances {
-		fmt.Printf("balance[%s]: %s\n", addresses[i], balance)
+		balances, err := multicall.BalanceOf(context.Background(), tokenAddress, addresses)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for i, balance := range balances {
+			fmt.Printf("balance[%s]: %s\n", addresses[i], balance)
+		}
+
+		wg.Done()
+		results <- balances
+
+		fmt.Println("multicall done")
+	}()
+
+	wg.Add(1)
+	go func() {
+		clientSolid := tron.NewSolid(rpc)
+		multicallSolid := clientSolid.NewMulticall(multicallAddress)
+
+		balancesSolid, err := multicallSolid.BalanceOf(context.Background(), tokenAddress, addresses)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for i, balance := range balancesSolid {
+			fmt.Printf("balance[%s]: %s\n", addresses[i], balance)
+		}
+
+		wg.Done()
+		results <- balancesSolid
+
+		fmt.Println("multicall done")
+	}()
+
+	wg.Wait()
+	close(results)
+
+	for result := range results {
+		for i, balance := range result {
+			fmt.Printf("balance[%s]: %s\n", addresses[i], balance)
+		}
 	}
 }
