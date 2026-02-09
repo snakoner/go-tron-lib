@@ -2,12 +2,16 @@ package tron
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"golang.org/x/crypto/sha3"
 )
 
 var b58Alphabet = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
@@ -187,4 +191,28 @@ func PrivateKeyHexToAddressBase58(privateKeyHex string) (string, error) {
 	full := append(payload, checksum...)
 
 	return base58Encode(full), nil
+}
+
+func checksum(input []byte) []byte {
+	h1 := sha256.Sum256(input)
+	h2 := sha256.Sum256(h1[:])
+	return h2[:4]
+}
+
+func GenerateAddress() (string, string, error) {
+	privateKey, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
+	if err != nil {
+		return "", "", err
+	}
+
+	pubKey := privateKey.PublicKey
+	pubBytes := crypto.FromECDSAPub(&pubKey)[1:]
+
+	hash := sha3.NewLegacyKeccak256()
+	hash.Write(pubBytes)
+	pubHash := hash.Sum(nil)
+
+	addr := append([]byte{0x41}, pubHash[12:]...)
+
+	return fmt.Sprintf("%x", crypto.FromECDSA(privateKey)), base58Encode(append(addr, checksum(addr)...)), nil
 }
