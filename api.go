@@ -248,3 +248,7 @@ func (c *Client) BalanceAt(ctx context.Context, address string) (*big.Int, error
 
 	return big.NewInt(resp.Balance), nil
 }
+
+func (c *Client) BalanceOf(ctx context.Context, tokenAddress string, address string) (*big.Int, error) {
+	return c.NewTRC20(tokenAddress).BalanceOf(ctx, address)
+}
