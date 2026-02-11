@@ -252,3 +252,52 @@ func (c *Client) BalanceAt(ctx context.Context, address string) (*big.Int, error
 func (c *Client) BalanceOf(ctx context.Context, tokenAddress string, address string) (*big.Int, error) {
 	return c.NewTRC20(tokenAddress).BalanceOf(ctx, address)
 }
+
+func (c *Client) TransferToken(ctx context.Context, tokenAddress string, to string, amount *big.Int, privateKey string) (string, error) {
+	from, err := PrivateKeyHexToAddressBase58(privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	trc20 := c.NewTRC20(tokenAddress)
+	tx, err := trc20.BuildTransferTx(ctx, from, to, amount, 100000000)
+	if err != nil {
+		return "", err
+	}
+
+	signedTx, err := SignTransaction(tx, privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := c.BroadcastTransaction(ctx, signedTx)
+	if err != nil {
+		return "", err
+	}
+
+	return resp.TxID, nil
+}
+
+func (c *Client) TransferNative(ctx context.Context, to string, amount *big.Int, privateKey string) (string, error) {
+	from, err := PrivateKeyHexToAddressBase58(privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	tx, err := c.BuildTransferTRXTx(ctx, from, to, amount)
+	if err != nil {
+		return "", err
+	}
+
+	signedTx, err := SignTransaction(tx, privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := c.BroadcastTransaction(ctx, signedTx)
+	if err != nil {
+		return "", err
+	}
+
+	return resp.TxID, nil
+}

@@ -17,6 +17,10 @@ const (
 )
 
 func main() {
+
+	transferNative()
+	return
+
 	client := tron.New(rpc)
 
 	balance, err := client.BalanceAt(context.Background(), toAddress)
@@ -61,4 +65,24 @@ func main() {
 	}
 
 	log.Printf("status: %s", status)
+}
+
+func transferToken() {
+	client := tron.New(rpc)
+	txID, err := client.TransferToken(context.Background(), trc20Address, toAddress, big.NewInt(1000000), fromAddresspk)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("txID: %s", txID)
+}
+
+func transferNative() {
+	client := tron.New(rpc)
+	txID, err := client.TransferNative(context.Background(), toAddress, big.NewInt(1000000), fromAddresspk)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("txID: %s", txID)
 }
