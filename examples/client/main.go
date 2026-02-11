@@ -19,6 +19,13 @@ const (
 func main() {
 	client := tron.New(rpc)
 
+	balance, err := client.BalanceAt(context.Background(), toAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("balance: %s", balance)
+
 	nowBlock, err := client.GetNowBlock(context.Background())
 	if err != nil {
 		log.Fatal(err)

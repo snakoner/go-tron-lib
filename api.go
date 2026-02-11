@@ -230,3 +230,21 @@ func (c *Client) waitForStatus(
 		}
 	}
 }
+
+type getAccountResp struct {
+	Balance int64 `json:"balance"`
+}
+
+func (c *Client) BalanceAt(ctx context.Context, address string) (*big.Int, error) {
+	raw, err := c.GetAccount(ctx, address)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp getAccountResp
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, err
+	}
+
+	return big.NewInt(resp.Balance), nil
+}
