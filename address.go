@@ -217,7 +217,7 @@ func GenerateAddress() (string, string, error) {
 	return fmt.Sprintf("%x", crypto.FromECDSA(privateKey)), base58Encode(append(addr, checksum(addr)...)), nil
 }
 
-func ValidateTronAddress(addr string) error {
+func ValidateBase58Address(addr string) error {
 	if addr == "" {
 		return fmt.Errorf("empty address")
 	}
