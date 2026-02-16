@@ -216,3 +216,32 @@ func GenerateAddress() (string, string, error) {
 
 	return fmt.Sprintf("%x", crypto.FromECDSA(privateKey)), base58Encode(append(addr, checksum(addr)...)), nil
 }
+
+func ValidateTronAddress(addr string) error {
+	if addr == "" {
+		return fmt.Errorf("empty address")
+	}
+
+	decoded, err := base58Decode(addr)
+	if err != nil {
+		return fmt.Errorf("invalid base58 address: %w", err)
+	}
+
+	if len(decoded) != 25 {
+		return fmt.Errorf("invalid length")
+	}
+
+	if decoded[0] != byte(0x41) {
+		return fmt.Errorf("invalid tron network prefix")
+	}
+
+	payload := decoded[:21]
+	checksum := decoded[21:]
+	expected := checksum4(payload)
+
+	if !bytes.Equal(checksum, expected) {
+		return fmt.Errorf("invalid checksum")
+	}
+
+	return nil
+}
