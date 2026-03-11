@@ -97,13 +97,18 @@ func transferWithNative() {
 	contractAddress := "TJsxk3V1Dfc9YFLvk9NqnRpW3GJDyxhpTV"
 	to := "TByEB7bRrvdto2KcKx1sTfPrPf3HHqzCXC"
 	fromAddressPriv := "8ffea112b11448c6e8acd2e5ec0a515768db0af2110d6f52dc31dc26dfb89046"
+	fromAddress, err := tron.PrivateKeyHexToAddressBase58(fromAddressPriv)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	client := tron.New(rpc)
 	txID, err := client.BuildFunctionTx(
 		context.Background(),
 		contractAddress,
 		"transferTokensWithNative(bytes32,address,uint256,uint256)",
 		100_000_000,
-		fromAddressPriv,
+		fromAddress,
 		UUIDToBytes32(uuid.New()),
 		to,
 		big.NewInt(1_000_000),

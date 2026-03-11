@@ -16,14 +16,9 @@ func (c *Client) BuildFunctionTx(
 	contractAddress string,
 	functionSig string,
 	feeLimit int64,
-	privateKey string,
+	fromAddress string,
 	params ...any,
 ) (json.RawMessage, error) {
-	ownerFrom, err := PrivateKeyHexToAddressBase58(privateKey)
-	if err != nil {
-		return nil, err
-	}
-
 	if strings.TrimSpace(functionSig) == "" {
 		return nil, errors.New("empty function signature")
 	}
@@ -34,7 +29,7 @@ func (c *Client) BuildFunctionTx(
 	}
 
 	raw, err := c.TriggerSmartContract(ctx, TriggerSmartContractReq{
-		OwnerAddress:    ownerFrom,
+		OwnerAddress:    fromAddress,
 		ContractAddress: contractAddress,
 		Function:        functionSig,
 		Parameter:       paramHex,
