@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/google/uuid"
 	"github.com/snakoner/go-tron-lib"
 )
 
@@ -86,17 +87,24 @@ func transferNative() {
 	log.Printf("txID: %s", txID)
 }
 
+func UUIDToBytes32(id uuid.UUID) [32]byte {
+	var out [32]byte
+	copy(out[:16], id[:])
+	return out
+}
+
 func transferWithNative() {
-	contractAddress := "TVqTLJGt7u9PGLYTmTmJBkmJbxNa9LqJy7"
+	contractAddress := "TJsxk3V1Dfc9YFLvk9NqnRpW3GJDyxhpTV"
 	to := "TByEB7bRrvdto2KcKx1sTfPrPf3HHqzCXC"
 	fromAddressPriv := "8ffea112b11448c6e8acd2e5ec0a515768db0af2110d6f52dc31dc26dfb89046"
 	client := tron.New(rpc)
 	txID, err := client.BuildFunctionTx(
 		context.Background(),
 		contractAddress,
-		"transferTokensWithNative(address,uint256,uint256)",
+		"transferTokensWithNative(bytes32,address,uint256,uint256)",
 		100_000_000,
 		fromAddressPriv,
+		UUIDToBytes32(uuid.New()),
 		to,
 		big.NewInt(1_000_000),
 		big.NewInt(1_000_000),
@@ -117,5 +125,5 @@ func transferWithNative() {
 		log.Fatal(err)
 	}
 
-	log.Printf("resp: %s", resp)
+	log.Printf("resp: %+v", resp)
 }

@@ -132,9 +132,19 @@ func encodeABIParamByType(typ string, v any) (string, error) {
 		return encodeABIInt256(v)
 	case "bool":
 		return encodeABIBool(v)
+	case "bytes32":
+		return encodeABIBytes32(v)
 	default:
 		return "", fmt.Errorf("unsupported abi type: %s", typ)
 	}
+}
+
+func encodeABIBytes32(v any) (string, error) {
+	bytes32, ok := v.([32]byte)
+	if !ok {
+		return "", fmt.Errorf("bytes32 must be [32]byte, got %T", v)
+	}
+	return leftPad64(hex.EncodeToString(bytes32[:])), nil
 }
 
 func encodeABIAddress(v any) (string, error) {
