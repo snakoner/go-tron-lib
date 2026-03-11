@@ -17,11 +17,10 @@ const (
 )
 
 func main() {
-
-	transferNative()
-	return
-
 	client := tron.New(rpc)
+
+	transferWithNative()
+	return
 
 	balance, err := client.BalanceAt(context.Background(), toAddress)
 	if err != nil {
@@ -85,4 +84,38 @@ func transferNative() {
 	}
 
 	log.Printf("txID: %s", txID)
+}
+
+func transferWithNative() {
+	contractAddress := "TVqTLJGt7u9PGLYTmTmJBkmJbxNa9LqJy7"
+	to := "TByEB7bRrvdto2KcKx1sTfPrPf3HHqzCXC"
+	fromAddressPriv := "8ffea112b11448c6e8acd2e5ec0a515768db0af2110d6f52dc31dc26dfb89046"
+	client := tron.New(rpc)
+	txID, err := client.BuildFunctionTx(
+		context.Background(),
+		contractAddress,
+		"transferTokensWithNative(address,uint256,uint256)",
+		100_000_000,
+		fromAddressPriv,
+		to,
+		big.NewInt(1_000_000),
+		big.NewInt(1_000_000),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	signedTx, err := tron.SignTransaction(txID, fromAddressPriv)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("signedTx: %s", signedTx)
+
+	resp, err := client.BroadcastTransaction(context.Background(), signedTx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("resp: %s", resp)
 }
